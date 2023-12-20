@@ -14,8 +14,6 @@ const webSocketServer = new WebSocket.Server({ port: webSocketPort });
 
 console.log(`websocket server listening on port ${webSocketPort}`);
 
-const numColors = 11;
-const hueIncr = 360 / numColors;
 const brushes = new Map();
 let boardSocket = null;
 let hue = 0;
@@ -35,7 +33,7 @@ webSocketServer.on('connection', (socket, req) => {
     const str = JSON.stringify(outgoing);
     socket.send(str);
     // hue = (hue + 0.6180339887498949 * 360) % 360;
-    hue = (hue + hueIncr) % 360;
+    hue = (hue + 0.6180339887498949 * 360) % 360;
   }
 
   socket.on('message', (message) => {
