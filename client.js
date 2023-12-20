@@ -1,5 +1,6 @@
 import { Canvas } from "./canvas.js";
 
+// create full screen canvas to draw to
 const canvasElem = document.getElementById("canvas");
 const canvas = new Canvas(canvasElem);
 let color = '#000';
@@ -7,9 +8,9 @@ let color = '#000';
 /****************************************************************
  * websocket communication
  */
-const socket = new WebSocket('ws://localhost:8000');
+const socket = new WebSocket('ws://localhost:3001');
 
-// listen to websocket connection open
+// listen to opening websocket connections
 socket.addEventListener('open', (event) => {
   // send regular ping messages
   setInterval(() => {
@@ -19,7 +20,7 @@ socket.addEventListener('open', (event) => {
   }, 20000);
 });
 
-// listen to message from server
+// listen to messages from server
 socket.addEventListener('message', (event) => {
   const message = event.data;
 
@@ -42,17 +43,18 @@ socket.addEventListener('message', (event) => {
 /****************************************************************
  * touch and mouse pointer event listeners
  */
+// touch listener
 window.addEventListener('touchstart', onPointerStart, false);
 window.addEventListener('touchmove', onPointerMove, false);
 window.addEventListener('touchend', onPointerEnd, false);
 window.addEventListener('touchcancel', onPointerEnd, false);
 
+// mouse pointer listener
 window.addEventListener('mousedown', onPointerStart, false);
 window.addEventListener('mousemove', onPointerMove, false);
 window.addEventListener('mouseup', onPointerEnd, false);
-//window.addEventListener('mouseout', onPointerEnd, false);
-
 let mouseIsDown = false;
+
 let lastX = null;
 let lastY = null;
 
@@ -87,9 +89,10 @@ function makeStroke(x, y) {
     lastY = currentY;
   }
 
+  // paint stroke into canvas (normalized coordinates)
   canvas.stroke(lastX, lastY, currentX, currentY, color);
 
-  // send paint stroke to server
+  // paint stroke with normalized start and end coordinates and color
   const outgoing = {
     selector: 'stroke',
     start: [lastX, lastY],
@@ -97,6 +100,7 @@ function makeStroke(x, y) {
     color: color
   };
 
+  // send paint stroke to server
   const str = JSON.stringify(outgoing);
   socket.send(str);
 

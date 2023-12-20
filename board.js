@@ -1,12 +1,13 @@
 import { Canvas } from "./canvas.js";
 
+// create full screen canvas to draw to
 const canvasElem = document.getElementById("canvas");
 const canvas = new Canvas(canvasElem);
 
 /****************************************************************
  * websocket communication
  */
-const socket = new WebSocket('ws://localhost:8000/board');
+const socket = new WebSocket('ws://localhost:3001/board');
 
 // listen to connection open
 socket.addEventListener('open', (event) => {
@@ -18,14 +19,14 @@ socket.addEventListener('open', (event) => {
   }, 20000);
 });
 
-// listen to message from server
+// listen to messages from server
 socket.addEventListener('message', (event) => {
   const message = event.data;
 
   if (message.length > 0) {
     const incoming = JSON.parse(message);
 
-    // dispatch incoming message
+    // dispatch incoming messages
     switch (incoming.selector) {
       case 'stroke':
         // paint a stroke sent by a client on the board

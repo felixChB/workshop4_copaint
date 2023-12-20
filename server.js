@@ -1,52 +1,58 @@
 import express from 'express';
 import WebSocket from 'ws';
-// const express = require('express')
-// const WebSocket = require('ws');
 
-const httpPort = 3000;
-const webServer = express()
+/****************************************************************
+ * static web server
+ */
+const httpPort = Number(process.env.PORT) || 3000;
+express()
   .use(express.static('.'))
   .listen(3000, () => console.log(`HTTP server istening on port ${httpPort}`))
 
-// // create WebSocket server with given port
-const webSocketPort = Number(process.env.PORT) || 8000;
+/****************************************************************
+ * websoket server
+ */
+const webSocketPort = 3001;
 const webSocketServer = new WebSocket.Server({ port: webSocketPort });
-
 console.log(`websocket server listening on port ${webSocketPort}`);
 
-const brushes = new Map();
-let boardSocket = null;
-let hue = 0;
+let boardSockets = new Set();
+let hue = 0; // painting color of next client connecting
 
-// init counters (0 is number of connected clients)
+// listen to new web socket connections
 webSocketServer.on('connection', (socket, req) => {
-  const isBoard = (req.url === '/board');
+  if (req.url === '/board') {
+    // add new board
+    boardSockets.add(socket);
 
-  if (isBoard) {
-    boardSocket = socket;
-
+    // remove board (when connection closes)
     socket.on('close', () => {
-      boardSocket = null;
+      boardSockets.delete(socket);
     });
   } else {
+    // send color to freshly connected client
     const outgoing = { selector: 'color', value: `hsl(${hue}, 100%, 50%)` };
     const str = JSON.stringify(outgoing);
     socket.send(str);
-    // hue = (hue + 0.6180339887498949 * 360) % 360;
+
+    // pick next color
     hue = (hue + 0.6180339887498949 * 360) % 360;
   }
 
+  // listen to client messages
   socket.on('message', (message) => {
-    if (message.length > 0) {
-      // receive paintbrush position from connected clients
+    if (message.length === 0) {
+      // receive ping from client and respond with pong message
+      socket.send('');
+    } else {
       const incoming = JSON.parse(message);
 
-      if (boardSocket !== null && incoming.selector === 'stroke') {
-        boardSocket.send(message);
+      // relay message from client to all boards
+      if (incoming.selector === 'stroke') {
+        for (let board of boardSockets) {
+          board.send(message);
+        }
       }
-    } else {
-      // receive ping and respond send pong message
-      socket.send('');
     }
   });
 });
