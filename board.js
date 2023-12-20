@@ -1,16 +1,16 @@
 import { Canvas } from "./canvas.js";
 
-const socket = new WebSocket('ws://localhost:8000/board');
 const canvasElem = document.getElementById("canvas");
 const canvas = new Canvas(canvasElem);
 
-window.addEventListener("resize", () => canvas.adaptSize());
-canvas.adaptSize();
-
+/****************************************************************
+ * websocket communication
+ */
+const socket = new WebSocket('ws://localhost:8000/board');
 
 // listen to connection open
 socket.addEventListener('open', (event) => {
-  // send regular ping messages
+  // send regular ping messages (to keep websocket connection alive)
   setInterval(() => {
     if (socket.readyState == socket.OPEN) {
       socket.send('');
@@ -28,10 +28,11 @@ socket.addEventListener('message', (event) => {
     // dispatch incoming message
     switch (incoming.selector) {
       case 'stroke':
+        // paint a stroke sent by a client on the board
         const start = incoming.start;
         const end = incoming.end;
         const color = incoming.color;
-        canvas.stroke(start[0] * canvas.width, start[1] * canvas.height, end[0] * canvas.width, end[1] * canvas.height, color);
+        canvas.stroke(start[0], start[1], end[0], end[1], color);
         break;
     }
   }
