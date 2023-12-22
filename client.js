@@ -5,7 +5,7 @@ const audioContext = new AudioContext();
 
 // websocket parameters
 const webSocketPort = 3001; 
-const webSocketAddr = '192.168.178.23';
+const webSocketAddr = '192.168.178.24';
 
 // create full screen canvas to draw to
 const canvasElem = document.getElementById("canvas");
@@ -157,7 +157,7 @@ function onDeviceOrientation(e) {
   beta = Math.min(Math.max(beta, minBeta), maxBeta);
 
   const x = (alpha + alphaRange) / (2 * alphaRange);
-  const y = (beta + minBeta) / (maxBeta - minBeta);
+  const y = 1 - (beta + minBeta) / (maxBeta - minBeta);
   makeStroke(x, y);
 }
 

@@ -30,6 +30,8 @@ webSocketServer.on('connection', (socket, req) => {
       boardSockets.delete(socket);
     });
   } else {
+    console.log('COUCOU!');
+
     // send color to freshly connected client
     const outgoing = { selector: 'color', value: `hsl(${hue}, 100%, 50%)` };
     const str = JSON.stringify(outgoing);
