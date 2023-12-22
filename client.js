@@ -127,10 +127,10 @@ function requestDeviceOrientation() {
   });
 }
 
-const refAlpha = null;
 const alphaRange = 45;
 const minBeta = 0;
 const maxBeta = 45;
+let refAlpha = null;
 
 function onDeviceOrientation(e) {
   if (dataStreamTimeout !== null && dataStreamResolve !== null) {
@@ -142,7 +142,7 @@ function onDeviceOrientation(e) {
   let beta = e.beta;
 
   if (refAlpha === null) {
-    refAlfa = e.alpha;
+    refAlfa = alpha;
   }
 
   alpha -= refAlpha;
