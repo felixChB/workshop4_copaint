@@ -10,7 +10,7 @@ const webSocketAddr = '192.168.178.23';
 // create full screen canvas to draw to
 const canvasElem = document.getElementById("canvas");
 const canvas = new Canvas(canvasElem);
-let color = '#000';
+let color = '#fff';
 
 /********************************************************************
  * 
