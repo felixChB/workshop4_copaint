@@ -183,14 +183,14 @@ function onPointerStart(e) {
   const x = e.changedTouches ? e.changedTouches[0].pageX : e.pageX;
   const y = e.changedTouches ? e.changedTouches[0].pageY : e.pageY;
   mouseIsDown = true;
-  makeStroke(x, y);
+  makeStroke(x / canvas.width, y / canvas.height); // normalize coordinates with canvas size
 }
 
 function onPointerMove(e) {
   if (mouseIsDown) {
     const x = e.changedTouches ? e.changedTouches[0].pageX : e.pageX;
     const y = e.changedTouches ? e.changedTouches[0].pageY : e.pageY;
-    makeStroke(x, y);
+    makeStroke(x / canvas.width, y / canvas.height); // normalize coordinates with canvas size
   }
 }
 
@@ -201,23 +201,19 @@ function onPointerEnd(e) {
 }
 
 function makeStroke(x, y) {
-  // normalize coordinates with canvas size
-  const currentX = x / canvas.width;
-  const currentY = y / canvas.height;
-
   if (lastX === null || lastY === null) {
-    lastX = currentX;
-    lastY = currentY;
+    lastX = x;
+    lastY = y;
   }
 
   // paint stroke into canvas (normalized coordinates)
-  canvas.stroke(lastX, lastY, currentX, currentY, color);
+  canvas.stroke(lastX, lastY, x, y, color);
 
   // paint stroke with normalized start and end coordinates and color
   const outgoing = {
     selector: 'stroke',
     start: [lastX, lastY],
-    end: [currentX, currentY],
+    end: [x, y],
     color: color
   };
 
@@ -225,8 +221,8 @@ function makeStroke(x, y) {
   const str = JSON.stringify(outgoing);
   socket.send(str);
 
-  lastX = currentX;
-  lastY = currentY;
+  lastX = x;
+  lastY = y;
 }
 
 /********************************************************************
