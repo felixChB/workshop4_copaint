@@ -1,5 +1,9 @@
 import { Canvas } from "./canvas.js";
 
+// websocket parameters
+const webSocketPort = 3001; 
+const webSocketAddr = 'localhost';
+
 // create full screen canvas to draw to
 const canvasElem = document.getElementById("canvas");
 const canvas = new Canvas(canvasElem);
@@ -7,7 +11,7 @@ const canvas = new Canvas(canvasElem);
 /****************************************************************
  * websocket communication
  */
-const socket = new WebSocket('ws://localhost:3001/board');
+const socket = new WebSocket(`ws://${webSocketAddr}:${webSocketPort}/board`);
 
 // listen to connection open
 socket.addEventListener('open', (event) => {

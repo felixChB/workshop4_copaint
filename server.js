@@ -7,7 +7,7 @@ import WebSocket from 'ws';
 const httpPort = Number(process.env.PORT) || 3000;
 express()
   .use(express.static('.'))
-  .listen(3000, () => console.log(`HTTP server istening on port ${httpPort}`))
+  .listen(3000, () => console.log(`HTTP server listening on port ${httpPort}`))
 
 /****************************************************************
  * websoket server
