@@ -1,5 +1,8 @@
 import { Canvas } from "./canvas.js";
 
+const AudioContext = window.AudioContext || window.webkitAudioContext;
+const audioContext = new AudioContext();
+
 // websocket parameters
 const webSocketPort = 3001; 
 const webSocketAddr = '192.168.178.23';
@@ -229,9 +232,6 @@ function makeStroke(x, y) {
 /********************************************************************
  * web audio
  */
-const AudioContext = window.AudioContext || window.webkitAudioContext;
-const audioContext = new AudioContext();
-
 // get promise for web audio check and start
 function requestWebAudio() {
   return new Promise((resolve, reject) => {
