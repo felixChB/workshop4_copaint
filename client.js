@@ -142,7 +142,7 @@ function onDeviceOrientation(e) {
   let beta = e.beta;
 
   if (refAlpha === null) {
-    refAlfa = alpha;
+    refAlpha = alpha;
   }
 
   alpha -= refAlpha;
