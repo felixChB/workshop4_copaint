@@ -156,7 +156,7 @@ function onDeviceOrientation(e) {
   alpha = Math.min(Math.max(alpha, -alphaRange), alphaRange);
   beta = Math.min(Math.max(beta, minBeta), maxBeta);
 
-  const x = (alpha + alphaRange) / (-2 * alphaRange);
+  const x = (alpha + alphaRange) / (2 * alphaRange);
   const y = (beta + minBeta) / (maxBeta - minBeta);
   makeStroke(x, y);
 }
