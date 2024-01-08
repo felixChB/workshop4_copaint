@@ -1,19 +1,34 @@
+import fs from 'fs';
 import express from 'express';
 import WebSocket from 'ws';
+import https from 'https';
+
+const key = fs.readFileSync('sslcert/selfsigned.key', 'utf8');
+const cert = fs.readFileSync('sslcert/selfsigned.crt', 'utf8');
+const credentials = { key, cert };
 
 /****************************************************************
  * static web server
  */
 const httpPort = Number(process.env.PORT) || 3000;
-express()
-  .use(express.static('.'))
-  .listen(3000, () => console.log(`HTTP server listening on port ${httpPort}`))
+const app = express();
+
+const httpsServer = https
+  .createServer(credentials, app)
+  .listen(httpPort, () => console.log(`HTTP server listening on port ${httpPort}`));
+
+app.use(express.static('.'));
+
+// app.get('/', (req, res) => {
+//   res.send("Hello from express server.")
+// })
 
 /****************************************************************
  * websoket server
  */
 const webSocketPort = 3001;
-const webSocketServer = new WebSocket.Server({ port: webSocketPort });
+//const webSocketServer = new WebSocket.Server({ port: webSocketPort });
+const webSocketServer = new WebSocket.Server({ server: httpsServer });
 console.log(`websocket server listening on port ${webSocketPort}`);
 
 let boardSockets = new Set();
@@ -30,8 +45,6 @@ webSocketServer.on('connection', (socket, req) => {
       boardSockets.delete(socket);
     });
   } else {
-    console.log('COUCOU!');
-
     // send color to freshly connected client
     const outgoing = { selector: 'color', value: `hsl(${hue}, 100%, 50%)` };
     const str = JSON.stringify(outgoing);

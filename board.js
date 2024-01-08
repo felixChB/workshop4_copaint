@@ -1,8 +1,8 @@
 import { Canvas } from "./canvas.js";
 
 // websocket parameters
-const webSocketPort = 3001; 
-const webSocketAddr = 'localhost';
+const webSocketPort = 3000; 
+const webSocketAddr = '192.168.178.23';
 
 // create full screen canvas to draw to
 const canvasElem = document.getElementById("canvas");
@@ -11,7 +11,7 @@ const canvas = new Canvas(canvasElem);
 /****************************************************************
  * websocket communication
  */
-const socket = new WebSocket(`ws://${webSocketAddr}:${webSocketPort}/board`);
+const socket = new WebSocket(`wss://${webSocketAddr}:${webSocketPort}/board`);
 
 // listen to connection open
 socket.addEventListener('open', (event) => {
@@ -36,8 +36,9 @@ socket.addEventListener('message', (event) => {
         // paint a stroke sent by a client on the board
         const start = incoming.start;
         const end = incoming.end;
+        const thickness = incoming.thickness;
         const color = incoming.color;
-        canvas.stroke(start[0], start[1], end[0], end[1], color);
+        canvas.stroke(start[0], start[1], end[0], end[1], thickness, color);
         break;
     }
   }

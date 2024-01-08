@@ -4,55 +4,18 @@ const AudioContext = window.AudioContext || window.webkitAudioContext;
 const audioContext = new AudioContext();
 
 // websocket parameters
-const webSocketPort = 3001; 
-const webSocketAddr = '192.168.178.24';
+const webSocketPort = 3000;
+const webSocketAddr = '192.168.178.23';
 
 // create full screen canvas to draw to
 const canvasElem = document.getElementById("canvas");
 const canvas = new Canvas(canvasElem);
 let color = '#fff';
 
-/********************************************************************
- * 
- *  start screen (overlay)
- * 
- */
-// start screen HTML elements
-const startScreenDiv = document.getElementById("start-screen");
-const startScreenTextDiv = startScreenDiv.querySelector("p");
-
-// open start screen
-startScreenDiv.style.display = "block";
-setOverlayText("touch screen to start");
-
-// start after touch
-startScreenDiv.addEventListener("click", () => {
-  setOverlayText("checking for motion sensors...");
-
-  const audioPromise = requestWebAudio();
-  const deviceOrientationPromise = requestDeviceOrientation();
-
-  Promise.all([audioPromise, deviceOrientationPromise])
-    .then(() => startScreenDiv.style.display = "none") // close start screen (everything is ok)
-    .catch((error) => setOverlayError(error)); // display error
-});
-
-// display text on start screen
-function setOverlayText(text) {
-  startScreenTextDiv.classList.remove("error");
-  startScreenTextDiv.innerHTML = text;
-}
-
-// display error message on start screen
-function setOverlayError(text) {
-  startScreenTextDiv.classList.add("error");
-  startScreenTextDiv.innerHTML = text;
-}
-
 /****************************************************************
  * websocket communication
  */
-const socket = new WebSocket(`ws://${webSocketAddr}:${webSocketPort}`);
+const socket = new WebSocket(`wss://${webSocketAddr}:${webSocketPort}`);
 
 // listen to opening websocket connections
 socket.addEventListener('open', (event) => {
@@ -83,6 +46,95 @@ socket.addEventListener('message', (event) => {
     }
   }
 });
+
+/********************************************************************
+ *  start screen (overlay)
+ */
+// start screen HTML elements
+const startScreenDiv = document.getElementById("start-screen");
+const startScreenTextDiv = startScreenDiv.querySelector("p");
+
+// open start screen
+startScreenDiv.style.display = "block";
+setOverlayText("touch screen to start");
+
+// start after touch
+startScreenDiv.addEventListener("click", () => {
+  setOverlayText("checking for motion sensors...");
+
+  const audioPromise = requestWebAudio();
+  const deviceOrientationPromise = requestDeviceOrientation();
+
+  Promise.all([audioPromise, deviceOrientationPromise])
+    .then(() => startScreenDiv.style.display = "none") // close start screen (everything is ok)
+    .catch((error) => setOverlayError(error)); // display error
+});
+
+// display text on start screen
+function setOverlayText(text) {
+  startScreenTextDiv.classList.remove("error");
+  startScreenTextDiv.innerHTML = text;
+}
+
+/****************************************************************
+ * draw stroke to canvas
+ */
+let lastTime = null;
+let lastX = null;
+let lastY = null;
+let lastFilteredThickness = 0;
+
+
+function makeStroke(x, y) {
+  const time = 0.001 * performance.now();
+
+  const diffX = x - lastX;
+  const diffY = y - lastY;
+  const dist = Math.sqrt(diffX * diffX + diffY * diffY);
+  const speed = dist / (time - lastTime);
+  const thickness = Math.pow(1 - Math.min(1, speed), 2);
+  const filteredThickness = 0.5 * lastFilteredThickness + 0.5 * thickness;
+
+  if (lastX !== null && lastY !== null) {
+    // paint stroke into canvas (normalized coordinates)
+    canvas.stroke(lastX, lastY, x, y, filteredThickness, color);
+
+    // paint stroke with normalized start and end coordinates and color
+    const outgoing = {
+      selector: 'stroke',
+      start: [lastX, lastY],
+      end: [x, y],
+      color: color,
+      thickness: filteredThickness
+    };
+
+    // send paint stroke to server
+    const str = JSON.stringify(outgoing);
+    socket.send(str);
+  }
+
+  lastTime = time;
+  lastX = x;
+  lastY = y;
+  lastFilteredThickness = filteredThickness;
+}
+
+/****************************************************************
+ * touch listeners
+ */
+window.addEventListener('touchstart', onTouchStart, false);
+window.addEventListener('touchend', onTouchEnd, false);
+window.addEventListener('touchmove', () => e.preventDefault(), false);
+
+let touchDown = false;
+function onTouchStart(e) {
+  touchDown = (e.touches.length > 0);
+}
+
+function onTouchEnd(e) {
+  touchDown = (e.touches.length > 0);
+  lastX = lastY = null;
+}
 
 /********************************************************************
  *  device orientation
@@ -131,6 +183,8 @@ const alphaRange = 45;
 const minBeta = 0;
 const maxBeta = 45;
 let refAlpha = null;
+let lastAlpha = null;
+let lastBeta = null;
 
 function onDeviceOrientation(e) {
   if (dataStreamTimeout !== null && dataStreamResolve !== null) {
@@ -153,76 +207,24 @@ function onDeviceOrientation(e) {
     alpha -= 360;
   }
 
-  alpha = Math.min(Math.max(alpha, -alphaRange), alphaRange);
-  beta = Math.min(Math.max(beta, minBeta), maxBeta);
+  if (Math.abs(alpha - lastAlpha) < 90 && Math.abs(beta - lastBeta) < 90) {
+    alpha = Math.min(Math.max(alpha, -alphaRange), alphaRange);
+    beta = Math.min(Math.max(beta, minBeta), maxBeta);
 
-  const x = (alpha + alphaRange) / (2 * alphaRange);
-  const y = 1 - (beta + minBeta) / (maxBeta - minBeta);
-  makeStroke(x, y);
-}
+    const x = 1 - (alpha + alphaRange) / (2 * alphaRange);
+    const y = 1 - (beta + minBeta) / (maxBeta - minBeta);
 
-/****************************************************************
- * touch and mouse pointer event listeners
- */
-// touch listener
-// window.addEventListener('touchstart', onPointerStart, false);
-// window.addEventListener('touchmove', onPointerMove, false);
-// window.addEventListener('touchend', onPointerEnd, false);
-// window.addEventListener('touchcancel', onPointerEnd, false);
+    if ((x === 0 || x === 1) && (y === 0 || y === 1)) {
+      console.log(alpha, beta);
+    }
 
-// mouse pointer listener
-// window.addEventListener('mousedown', onPointerStart, false);
-// window.addEventListener('mousemove', onPointerMove, false);
-// window.addEventListener('mouseup', onPointerEnd, false);
-let mouseIsDown = false;
+    if (touchDown) {
+      makeStroke(x, y);
+    }
 
-let lastX = null;
-let lastY = null;
-
-function onPointerStart(e) {
-  const x = e.changedTouches ? e.changedTouches[0].pageX : e.pageX;
-  const y = e.changedTouches ? e.changedTouches[0].pageY : e.pageY;
-  mouseIsDown = true;
-  makeStroke(x / canvas.width, y / canvas.height); // normalize coordinates with canvas size
-}
-
-function onPointerMove(e) {
-  if (mouseIsDown) {
-    const x = e.changedTouches ? e.changedTouches[0].pageX : e.pageX;
-    const y = e.changedTouches ? e.changedTouches[0].pageY : e.pageY;
-    makeStroke(x / canvas.width, y / canvas.height); // normalize coordinates with canvas size
+    lastAlpha = alpha;
+    lastBeta = beta;
   }
-}
-
-function onPointerEnd(e) {
-  mouseIsDown = false;
-  lastX = null;
-  lastY = null;
-}
-
-function makeStroke(x, y) {
-  if (lastX === null || lastY === null) {
-    lastX = x;
-    lastY = y;
-  }
-
-  // paint stroke into canvas (normalized coordinates)
-  canvas.stroke(lastX, lastY, x, y, color);
-
-  // paint stroke with normalized start and end coordinates and color
-  const outgoing = {
-    selector: 'stroke',
-    start: [lastX, lastY],
-    end: [x, y],
-    color: color
-  };
-
-  // send paint stroke to server
-  const str = JSON.stringify(outgoing);
-  socket.send(str);
-
-  lastX = x;
-  lastY = y;
 }
 
 /********************************************************************
@@ -241,3 +243,46 @@ function requestWebAudio() {
     }
   });
 }
+
+// display error message on start screen
+function setOverlayError(text) {
+  startScreenTextDiv.classList.add("error");
+  startScreenTextDiv.innerHTML = text;
+}
+
+/****************************************************************
+ * touch and mouse pointer event listeners
+ */
+// touch listener
+// window.addEventListener('touchstart', onPointerStart, false);
+// window.addEventListener('touchmove', onPointerMove, false);
+// window.addEventListener('touchend', onPointerEnd, false);
+// window.addEventListener('touchcancel', onPointerEnd, false);
+
+// mouse pointer listener
+// window.addEventListener('mousedown', onPointerStart, false);
+// window.addEventListener('mousemove', onPointerMove, false);
+// window.addEventListener('mouseup', onPointerEnd, false);
+
+// let mouseIsDown = false;
+
+// function onPointerStart(e) {
+//   const x = e.changedTouches ? e.changedTouches[0].pageX : e.pageX;
+//   const y = e.changedTouches ? e.changedTouches[0].pageY : e.pageY;
+//   mouseIsDown = true;
+//   makeStroke(x / canvas.width, y / canvas.height); // normalize coordinates with canvas size
+// }
+
+// function onPointerMove(e) {
+//   if (mouseIsDown) {
+//     const x = e.changedTouches ? e.changedTouches[0].pageX : e.pageX;
+//     const y = e.changedTouches ? e.changedTouches[0].pageY : e.pageY;
+//     makeStroke(x / canvas.width, y / canvas.height); // normalize coordinates with canvas size
+//   }
+// }
+
+// function onPointerEnd(e) {
+//   mouseIsDown = false;
+//   lastX = null;
+//   lastY = null;
+// }
