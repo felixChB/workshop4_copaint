@@ -7,7 +7,7 @@ const key = fs.readFileSync('sslcert/selfsigned.key', 'utf8');
 const cert = fs.readFileSync('sslcert/selfsigned.crt', 'utf8');
 const credentials = { key, cert };
 
-// openssl req -x509 -sha256 -nodes -days 365 -newkey rsa:2048 -keyout selfsigned.key -out selfsigned.crt
+// openssl req -x509 -sha256 -nodes -days 365 -newkey rsa:2048 -keyout sslcert/selfsigned.key -out sslcert/selfsigned.crt
 
 /****************************************************************
  * static web server
