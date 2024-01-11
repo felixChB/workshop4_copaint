@@ -7,6 +7,8 @@ const key = fs.readFileSync('sslcert/selfsigned.key', 'utf8');
 const cert = fs.readFileSync('sslcert/selfsigned.crt', 'utf8');
 const credentials = { key, cert };
 
+// openssl req -x509 -sha256 -nodes -days 365 -newkey rsa:2048 -keyout selfsigned.key -out selfsigned.crt
+
 /****************************************************************
  * static web server
  */
@@ -26,10 +28,8 @@ app.use(express.static('.'));
 /****************************************************************
  * websoket server
  */
-const webSocketPort = 3001;
-//const webSocketServer = new WebSocket.Server({ port: webSocketPort });
 const webSocketServer = new WebSocket.Server({ server: httpsServer });
-console.log(`websocket server listening on port ${webSocketPort}`);
+console.log(`websocket server listening`);
 
 let boardSockets = new Set();
 let hue = 0; // painting color of next client connecting

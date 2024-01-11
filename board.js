@@ -2,7 +2,7 @@ import { Canvas } from "./canvas.js";
 
 // websocket parameters
 const webSocketPort = 3000; 
-const webSocketAddr = '192.168.178.23';
+const webSocketAddr = '192.168.0.241';
 
 // create full screen canvas to draw to
 const canvasElem = document.getElementById("canvas");

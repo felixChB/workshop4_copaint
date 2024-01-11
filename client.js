@@ -5,7 +5,7 @@ const audioContext = new AudioContext();
 
 // websocket parameters
 const webSocketPort = 3000;
-const webSocketAddr = '192.168.178.23';
+const webSocketAddr = '192.168.0.241';
 
 // create full screen canvas to draw to
 const canvasElem = document.getElementById("canvas");
@@ -58,14 +58,27 @@ const startScreenTextDiv = startScreenDiv.querySelector("p");
 startScreenDiv.style.display = "block";
 setOverlayText("touch screen to start");
 
+let promise = null;
+
 // start after touch
 startScreenDiv.addEventListener("click", () => {
-  setOverlayText("checking for motion sensors...");
+  if (matchMedia('(hover:hover)').matches) {
+    setOverlayText("checking for web audio...");
 
-  const audioPromise = requestWebAudio();
-  const deviceOrientationPromise = requestDeviceOrientation();
+    listenForMousePointer();
 
-  Promise.all([audioPromise, deviceOrientationPromise])
+    promise = requestWebAudio();
+
+  } else {
+    setOverlayText("checking for web audio and motion sensors...");
+
+    const audioPromise = requestWebAudio();
+    const deviceOrientationPromise = requestDeviceOrientation();
+
+    promise = Promise.all([audioPromise, deviceOrientationPromise]);
+  }
+
+  promise
     .then(() => startScreenDiv.style.display = "none") // close start screen (everything is ok)
     .catch((error) => setOverlayError(error)); // display error
 });
@@ -124,7 +137,7 @@ function makeStroke(x, y) {
  */
 window.addEventListener('touchstart', onTouchStart, false);
 window.addEventListener('touchend', onTouchEnd, false);
-window.addEventListener('touchmove', () => e.preventDefault(), false);
+window.addEventListener('touchmove', (e) => e.preventDefault(), false);
 
 let touchDown = false;
 function onTouchStart(e) {
@@ -260,29 +273,31 @@ function setOverlayError(text) {
 // window.addEventListener('touchcancel', onPointerEnd, false);
 
 // mouse pointer listener
-// window.addEventListener('mousedown', onPointerStart, false);
-// window.addEventListener('mousemove', onPointerMove, false);
-// window.addEventListener('mouseup', onPointerEnd, false);
+function listenForMousePointer() {
+  window.addEventListener('mousedown', onPointerStart, false);
+  window.addEventListener('mousemove', onPointerMove, false);
+  window.addEventListener('mouseup', onPointerEnd, false);
+}
 
-// let mouseIsDown = false;
+let mouseIsDown = false;
 
-// function onPointerStart(e) {
-//   const x = e.changedTouches ? e.changedTouches[0].pageX : e.pageX;
-//   const y = e.changedTouches ? e.changedTouches[0].pageY : e.pageY;
-//   mouseIsDown = true;
-//   makeStroke(x / canvas.width, y / canvas.height); // normalize coordinates with canvas size
-// }
+function onPointerStart(e) {
+  const x = e.changedTouches ? e.changedTouches[0].pageX : e.pageX;
+  const y = e.changedTouches ? e.changedTouches[0].pageY : e.pageY;
+  mouseIsDown = true;
+  makeStroke(x / canvas.width, y / canvas.height); // normalize coordinates with canvas size
+}
 
-// function onPointerMove(e) {
-//   if (mouseIsDown) {
-//     const x = e.changedTouches ? e.changedTouches[0].pageX : e.pageX;
-//     const y = e.changedTouches ? e.changedTouches[0].pageY : e.pageY;
-//     makeStroke(x / canvas.width, y / canvas.height); // normalize coordinates with canvas size
-//   }
-// }
+function onPointerMove(e) {
+  if (mouseIsDown) {
+    const x = e.changedTouches ? e.changedTouches[0].pageX : e.pageX;
+    const y = e.changedTouches ? e.changedTouches[0].pageY : e.pageY;
+    makeStroke(x / canvas.width, y / canvas.height); // normalize coordinates with canvas size
+  }
+}
 
-// function onPointerEnd(e) {
-//   mouseIsDown = false;
-//   lastX = null;
-//   lastY = null;
-// }
+function onPointerEnd(e) {
+  mouseIsDown = false;
+  lastX = null;
+  lastY = null;
+}
