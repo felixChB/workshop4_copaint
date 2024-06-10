@@ -1,34 +1,34 @@
-import fs from 'fs';
 import express from 'express';
 import WebSocket from 'ws';
-import https from 'https';
+// import https from 'https';
+import http from 'http';
 
-const key = fs.readFileSync('sslcert/selfsigned.key', 'utf8');
-const cert = fs.readFileSync('sslcert/selfsigned.crt', 'utf8');
-const credentials = { key, cert };
-
+// const key = fs.readFileSync('sslcert/selfsigned.key', 'utf8');
+// const cert = fs.readFileSync('sslcert/selfsigned.crt', 'utf8');
+// const credentials = { key, cert };
 // openssl req -x509 -sha256 -nodes -days 365 -newkey rsa:2048 -keyout sslcert/selfsigned.key -out sslcert/selfsigned.crt
 
 /****************************************************************
- * static web server
+ * http server
  */
 const httpPort = Number(process.env.PORT) || 3000;
 const app = express();
 
-const httpsServer = https
-  .createServer(credentials, app)
+// const httpsServer = https
+//   .createServer(credentials, app)
+//   .listen(httpPort, () => console.log(`HTTP server listening on port ${httpPort}`));
+
+const httpServer = http
+  .createServer(app)
   .listen(httpPort, () => console.log(`HTTP server listening on port ${httpPort}`));
 
 app.use(express.static('.'));
 
-// app.get('/', (req, res) => {
-//   res.send("Hello from express server.")
-// })
-
 /****************************************************************
  * websoket server
  */
-const webSocketServer = new WebSocket.Server({ server: httpsServer });
+// const webSocketServer = new WebSocket.Server({ server: httpsServer });
+const webSocketServer = new WebSocket.Server({ server: httpServer });
 console.log(`websocket server listening`);
 
 let boardSockets = new Set();

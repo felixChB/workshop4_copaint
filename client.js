@@ -1,11 +1,8 @@
 import { Canvas } from "./canvas.js";
 
-const AudioContext = window.AudioContext || window.webkitAudioContext;
-const audioContext = new AudioContext();
-
 // websocket parameters
 const webSocketPort = 3000;
-const webSocketAddr = '192.168.0.241';
+const webSocketAddr = '192.168.0.210';
 
 // create full screen canvas to draw to
 const canvasElem = document.getElementById("canvas");
@@ -15,7 +12,8 @@ let color = '#fff';
 /****************************************************************
  * websocket communication
  */
-const socket = new WebSocket(`wss://${webSocketAddr}:${webSocketPort}`);
+// const socket = new WebSocket(`wss://${webSocketAddr}:${webSocketPort}`);
+const socket = new WebSocket(`ws://${webSocketAddr}:${webSocketPort}`);
 
 // listen to opening websocket connections
 socket.addEventListener('open', (event) => {
@@ -58,30 +56,27 @@ const startScreenTextDiv = startScreenDiv.querySelector("p");
 startScreenDiv.style.display = "block";
 setOverlayText("touch screen to start");
 
-let promise = null;
-
 // start after touch
-startScreenDiv.addEventListener("click", () => {
+startScreenDiv.addEventListener("touchend", onStartScreenClick);
+startScreenDiv.addEventListener("mouseup", onStartScreenClick);
+
+function onStartScreenClick() {
+  startScreenDiv.removeEventListener("touchend", onStartScreenClick);
+  startScreenDiv.removeEventListener("mouseup", onStartScreenClick);
+
   if (matchMedia('(hover:hover)').matches) {
-    setOverlayText("checking for web audio...");
-
     listenForMousePointer();
-
-    promise = requestWebAudio();
-
   } else {
-    setOverlayText("checking for web audio and motion sensors...");
+    listenForTouch();
 
-    const audioPromise = requestWebAudio();
-    const deviceOrientationPromise = requestDeviceOrientation();
-
-    promise = Promise.all([audioPromise, deviceOrientationPromise]);
+    // setOverlayText("checking for motion sensors...");
+    // requestDeviceOrientation()
+    //   .then(() => startScreenDiv.style.display = "none") // close start screen (everything is ok)
+    //   .catch((error) => setOverlayError(error)); // display error
   }
 
-  promise
-    .then(() => startScreenDiv.style.display = "none") // close start screen (everything is ok)
-    .catch((error) => setOverlayError(error)); // display error
-});
+  startScreenDiv.style.display = "none";
+}
 
 // display text on start screen
 function setOverlayText(text) {
@@ -241,22 +236,8 @@ function onDeviceOrientation(e) {
 }
 
 /********************************************************************
- * web audio
+ * overlay
  */
-// get promise for web audio check and start
-function requestWebAudio() {
-  return new Promise((resolve, reject) => {
-    if (AudioContext) {
-      audioContext.resume()
-        .then(() => resolve())
-        .catch(() => reject());
-    }
-    else {
-      reject("web audio not available");
-    }
-  });
-}
-
 // display error message on start screen
 function setOverlayError(text) {
   startScreenTextDiv.classList.add("error");
@@ -267,10 +248,12 @@ function setOverlayError(text) {
  * touch and mouse pointer event listeners
  */
 // touch listener
-// window.addEventListener('touchstart', onPointerStart, false);
-// window.addEventListener('touchmove', onPointerMove, false);
-// window.addEventListener('touchend', onPointerEnd, false);
-// window.addEventListener('touchcancel', onPointerEnd, false);
+function listenForTouch() {
+  window.addEventListener('touchstart', onPointerStart, false);
+  window.addEventListener('touchmove', onPointerMove, false);
+  window.addEventListener('touchend', onPointerEnd, false);
+  window.addEventListener('touchcancel', onPointerEnd, false);
+}
 
 // mouse pointer listener
 function listenForMousePointer() {
