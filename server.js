@@ -94,7 +94,7 @@ webSocketServer.on('connection', (socket, req) => {
       switch (incoming.selector) {
         case 'clientClick':
           checkIncomingClicks(socket);
-          bombCounter++;
+          bombCounter += 2;
           if (bombCounter >= 20) {
             bombCounter = 20;
           }

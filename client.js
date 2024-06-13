@@ -5,8 +5,8 @@ const webSocketPort = 3000;
 const webSocketAddr = '10.136.1.73';
 
 // create full screen canvas to draw to
-const canvasElem = document.getElementById("canvas");
-const canvas = new Canvas(canvasElem);
+// const canvasElem = document.getElementById("canvas");
+// const canvas = new Canvas(canvasElem);
 
 const countElem = document.getElementById("bombCount");
 const highscoreElem = document.getElementById("highscoreCount");
@@ -44,7 +44,12 @@ socket.addEventListener('message', (event) => {
     // dispatch incomming messages
     switch (incoming.selector) {
       case 'info':
-        countElem.innerHTML = incoming.counter;
+        if (incoming.counter.toString().length == 1) {
+          countElem.innerHTML = "00:0" + incoming.counter;
+        } else {
+          countElem.innerHTML = "00:" + incoming.counter;
+        }
+
         highscoreElem.innerHTML = "Score: " + incoming.highscore;
         playerCountElem.innerHTML = incoming.playerCount;
         gameoverScoreElem.innerHTML = "Your Score: " + incoming.highscore;
