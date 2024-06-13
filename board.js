@@ -2,11 +2,14 @@ import { Canvas } from "./canvas.js";
 
 // websocket parameters
 const webSocketPort = 3000; 
-const webSocketAddr = '192.168.0.210';
+const webSocketAddr = '10.136.1.73';
 
 // create full screen canvas to draw to
 const canvasElem = document.getElementById("canvas");
 const canvas = new Canvas(canvasElem);
+
+const countElem = document.getElementById("playerColor");
+let count = 0;
 
 /****************************************************************
  * websocket communication
@@ -39,7 +42,13 @@ socket.addEventListener('message', (event) => {
         const end = incoming.end;
         const thickness = incoming.thickness;
         const color = incoming.color;
+        const playerColor = incoming.playerColor
         canvas.stroke(start[0], start[1], end[0], end[1], thickness, color);
+      
+      case 'countUp':
+        count = incoming.count;
+        countElem.innerHTML = count;
+
         break;
     }
   }

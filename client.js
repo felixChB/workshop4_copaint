@@ -2,12 +2,21 @@ import { Canvas } from "./canvas.js";
 
 // websocket parameters
 const webSocketPort = 3000;
-const webSocketAddr = '192.168.0.210';
+const webSocketAddr = '10.136.1.73';
 
 // create full screen canvas to draw to
 const canvasElem = document.getElementById("canvas");
 const canvas = new Canvas(canvasElem);
-let color = '#fff';
+
+const countElem = document.getElementById("bombCount");
+const highscoreElem = document.getElementById("highscoreCount");
+const playerCountElem = document.getElementById("playerCount");
+const waitingElem = document.getElementById("waiting-message");
+
+const gameoverElem = document.getElementById("gameover-screen");
+const gameoverScoreElem = document.getElementById("gameover-score");
+const gameoverReasonElem = document.getElementById("gameover-reason");
+const gameRestartElem = document.getElementById("reset-button");
 
 /****************************************************************
  * websocket communication
@@ -34,9 +43,28 @@ socket.addEventListener('message', (event) => {
 
     // dispatch incomming messages
     switch (incoming.selector) {
-      case 'color':
-        // change color
-        color = incoming.value;
+      case 'info':
+        countElem.innerHTML = incoming.counter;
+        highscoreElem.innerHTML = "Score: " + incoming.highscore;
+        playerCountElem.innerHTML = incoming.playerCount;
+        gameoverScoreElem.innerHTML = "Your Score: " + incoming.highscore;
+
+        if (incoming.playerCount < 2) {
+          waitingElem.classList.add("show-waiting");
+        } else {
+          waitingElem.classList.remove("show-waiting");
+        }
+
+        break;
+
+      case 'gameOver':
+        onGameOver(incoming.reason);
+
+        break;
+
+      case 'reset':
+        location.reload();
+
         break;
 
       default:
@@ -85,49 +113,6 @@ function setOverlayText(text) {
 }
 
 /****************************************************************
- * draw stroke to canvas
- */
-let lastTime = null;
-let lastX = null;
-let lastY = null;
-let lastFilteredThickness = 0;
-
-
-function makeStroke(x, y) {
-  const time = 0.001 * performance.now();
-
-  const diffX = x - lastX;
-  const diffY = y - lastY;
-  const dist = Math.sqrt(diffX * diffX + diffY * diffY);
-  const speed = dist / (time - lastTime);
-  const thickness = Math.pow(1 - Math.min(1, speed), 2);
-  const filteredThickness = 0.5 * lastFilteredThickness + 0.5 * thickness;
-
-  if (lastX !== null && lastY !== null) {
-    // paint stroke into canvas (normalized coordinates)
-    canvas.stroke(lastX, lastY, x, y, filteredThickness, color);
-
-    // paint stroke with normalized start and end coordinates and color
-    const outgoing = {
-      selector: 'stroke',
-      start: [lastX, lastY],
-      end: [x, y],
-      color: color,
-      thickness: filteredThickness
-    };
-
-    // send paint stroke to server
-    const str = JSON.stringify(outgoing);
-    socket.send(str);
-  }
-
-  lastTime = time;
-  lastX = x;
-  lastY = y;
-  lastFilteredThickness = filteredThickness;
-}
-
-/****************************************************************
  * touch listeners
  */
 window.addEventListener('touchstart', onTouchStart, false);
@@ -145,97 +130,6 @@ function onTouchEnd(e) {
 }
 
 /********************************************************************
- *  device orientation
- */
-let dataStreamTimeout = null;
-let dataStreamResolve = null;
-
-// get promise for device orientation check and start
-function requestDeviceOrientation() {
-  return new Promise((resolve, reject) => {
-    dataStreamResolve = resolve;
-
-    // set timeout in case that the API is ok, but no data is sent
-    dataStreamTimeout = setTimeout(() => {
-      dataStreamTimeout = null;
-      reject("no motion sensor data streams");
-    }, 1000);
-
-    if (DeviceOrientationEvent) {
-      if (DeviceOrientationEvent.requestPermission) {
-        clearTimeout(dataStreamTimeout);
-
-        // ask device orientation permission on iOS
-        DeviceOrientationEvent.requestPermission()
-          .then((response) => {
-            if (response == "granted") {
-              // got permission
-              window.addEventListener("deviceorientation", onDeviceOrientation);
-              resolve();
-            } else {
-              reject("no permission for device orientation");
-            }
-          })
-          .catch(console.error);
-      } else {
-        // no permission needed on non-iOS devices
-        window.addEventListener("deviceorientation", onDeviceOrientation);
-      }
-    } else {
-      reject("device orientation not available");
-    }
-  });
-}
-
-const alphaRange = 45;
-const minBeta = 0;
-const maxBeta = 45;
-let refAlpha = null;
-let lastAlpha = null;
-let lastBeta = null;
-
-function onDeviceOrientation(e) {
-  if (dataStreamTimeout !== null && dataStreamResolve !== null) {
-    dataStreamResolve();
-    clearTimeout(dataStreamTimeout);
-  }
-
-  let alpha = e.alpha;
-  let beta = e.beta;
-
-  if (refAlpha === null) {
-    refAlpha = alpha;
-  }
-
-  alpha -= refAlpha;
-
-  if (alpha < -180) {
-    alpha += 360;
-  } else if (alpha >= 180) {
-    alpha -= 360;
-  }
-
-  if (Math.abs(alpha - lastAlpha) < 90 && Math.abs(beta - lastBeta) < 90) {
-    alpha = Math.min(Math.max(alpha, -alphaRange), alphaRange);
-    beta = Math.min(Math.max(beta, minBeta), maxBeta);
-
-    const x = 1 - (alpha + alphaRange) / (2 * alphaRange);
-    const y = 1 - (beta + minBeta) / (maxBeta - minBeta);
-
-    if ((x === 0 || x === 1) && (y === 0 || y === 1)) {
-      console.log(alpha, beta);
-    }
-
-    if (touchDown) {
-      makeStroke(x, y);
-    }
-
-    lastAlpha = alpha;
-    lastBeta = beta;
-  }
-}
-
-/********************************************************************
  * overlay
  */
 // display error message on start screen
@@ -249,38 +143,52 @@ function setOverlayError(text) {
  */
 // touch listener
 function listenForTouch() {
-  window.addEventListener('touchstart', onPointerStart, false);
-  window.addEventListener('touchmove', onPointerMove, false);
-  window.addEventListener('touchend', onPointerEnd, false);
-  window.addEventListener('touchcancel', onPointerEnd, false);
+  // window.addEventListener('touchstart', onPointerStart, false);
+  // window.addEventListener('touchmove', onPointerMove, false);
+  // window.addEventListener('touchend', onPointerEnd, false);
+  // window.addEventListener('touchcancel', onPointerEnd, false);
+
+  window.addEventListener('touch', clientClick);
 }
 
 // mouse pointer listener
 function listenForMousePointer() {
-  window.addEventListener('mousedown', onPointerStart, false);
-  window.addEventListener('mousemove', onPointerMove, false);
-  window.addEventListener('mouseup', onPointerEnd, false);
+  window.addEventListener('click', clientClick);
 }
 
-let mouseIsDown = false;
-
-function onPointerStart(e) {
-  const x = e.changedTouches ? e.changedTouches[0].pageX : e.pageX;
-  const y = e.changedTouches ? e.changedTouches[0].pageY : e.pageY;
-  mouseIsDown = true;
-  makeStroke(x / canvas.width, y / canvas.height); // normalize coordinates with canvas size
+function clientClick(e) {
+  // create click message
+  const countOut = {
+    selector: 'clientClick'
+  };
+  // click message to server
+  const str = JSON.stringify(countOut);
+  socket.send(str);
 }
 
-function onPointerMove(e) {
-  if (mouseIsDown) {
-    const x = e.changedTouches ? e.changedTouches[0].pageX : e.pageX;
-    const y = e.changedTouches ? e.changedTouches[0].pageY : e.pageY;
-    makeStroke(x / canvas.width, y / canvas.height); // normalize coordinates with canvas size
-  }
+function onGameOver(reason) {
+  console.log("recieve game over message");
+
+  // show gameOver screen
+  gameoverElem.classList.add("showOver");
+  gameoverReasonElem.innerHTML = reason;
+
+  // remove the click eventlisteners for the screen
+  window.removeEventListener('touch', clientClick);
+  window.removeEventListener('click', clientClick);
+
+  // create eventlisteners for the restart button
+  gameRestartElem.addEventListener('touch', requestReset);
+  gameRestartElem.addEventListener('click', requestReset);
 }
 
-function onPointerEnd(e) {
-  mouseIsDown = false;
-  lastX = null;
-  lastY = null;
+function requestReset() {
+  console.log("request restart");
+  // send reset befehl to server if one player clicks the restart button
+  const countOut = {
+    selector: 'resetRequest'
+  };
+  // send paint stroke to server
+  const str = JSON.stringify(countOut);
+  socket.send(str);
 }
